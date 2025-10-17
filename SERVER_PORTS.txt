@@ -1,0 +1,76 @@
+=================================================================
+                    TELNET SERVER PORT INFORMATION
+=================================================================
+
+This document lists all telnet servers in this directory and their
+configured port numbers.
+
+-----------------------------------------------------------------
+ACTIVE TELNET SERVERS (with defined ports)
+-----------------------------------------------------------------
+
+1. line_mode_server
+   - File: line_mode_server.c
+   - Port: 9091
+   - Description: Line Mode Echo Server
+   - Features: Line-by-line echo with UTF-8 support, timestamp every 10 seconds
+
+2. char_mode_server
+   - File: char_mode_server.c
+   - Port: 9092
+   - Description: Character Mode Echo Server
+   - Features: Character-by-character immediate echo, timestamp every 10 seconds
+
+3. line_mode_binary_server
+   - File: line_mode_binary_server.c
+   - Port: 9093
+   - Description: Line Mode Binary Echo Server
+   - Features: Line mode with BINARY option for UTF-8 support, timestamp every 10 seconds
+
+-----------------------------------------------------------------
+EXAMPLE/LIBRARY FILES (no fixed port)
+-----------------------------------------------------------------
+
+4. telnet_server_example
+   - File: telnet_server_example.c
+   - Port: Command-line argument (argv[1])
+   - Description: Basic telnet server example
+   - Usage: ./telnet_server_example <port_number>
+
+5. Telnet_Server_Access
+   - File: Telnet_Server_Access.c
+   - Port: N/A (Library example using rl_net.h)
+   - Description: Example for accepting/denying telnet client connections
+
+6. Telnet_Server_Multiuser
+   - File: Telnet_Server_Multiuser.c
+   - Port: N/A (Library example using rl_net.h)
+   - Description: Example for multi-user authentication
+
+7. Telnet_Server_UIF
+   - File: Telnet_Server_UIF.c
+   - Port: N/A (Library example using rl_net.h)
+   - Description: User Interface example for telnet server
+
+-----------------------------------------------------------------
+PORT SUMMARY
+-----------------------------------------------------------------
+
+Port 9091: line_mode_server
+Port 9092: char_mode_server
+Port 9093: line_mode_binary_server
+
+-----------------------------------------------------------------
+NOTES
+-----------------------------------------------------------------
+
+- All servers listen on all interfaces (INADDR_ANY: 0.0.0.0)
+- Servers support multiple concurrent clients via forking
+- All servers implement telnet protocol negotiation
+- To connect: telnet localhost <port_number>
+- Example files (4-7) require additional library (rl_net.h) or
+  command-line port specification
+
+=================================================================
+Generated: 2025-10-16
+=================================================================
