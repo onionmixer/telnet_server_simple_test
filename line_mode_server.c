@@ -11,6 +11,10 @@
 #include <pthread.h>
 #include <time.h>
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 #define PORT 9091
 #define BUFFER_SIZE 1024
 #define MAX_CLIENTS 10
@@ -182,7 +186,7 @@ void *timestamp_sender_thread(void *arg) {
 
         char ts[32];
         get_timestamp(ts, sizeof(ts));
-        printf("%s[LINE MODE] Sent timestamp to client (fd=%d)\n", ts, client_fd);
+        printf("%s[INFO] Sent timestamp to client (fd=%d).\n", ts, client_fd);
     }
 
     return NULL;
@@ -214,10 +218,12 @@ void setup_linemode(int client_fd, telnet_negotiation_t *negotiation) {
     };
     send(client_fd, linemode_cmd, sizeof(linemode_cmd), 0);
 
-    char ts[32];
-    get_timestamp(ts, sizeof(ts));
-    printf("%s[LINE MODE] Negotiation sent: DO LINEMODE, WONT ECHO, MODE=0x%02x (EDIT enabled)\n",
-           ts, MODE_EDIT);
+    if (DEBUG) {
+        char ts[32];
+        get_timestamp(ts, sizeof(ts));
+        printf("%s[DEBUG] Negotiation sent: DO LINEMODE, WONT ECHO, MODE=0x%02x (EDIT enabled).\n",
+               ts, MODE_EDIT);
+    }
 }
 
 void handle_client(int client_fd, struct sockaddr_in *client_addr) {
@@ -230,7 +236,7 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
     inet_ntop(AF_INET, &(client_addr->sin_addr), client_ip, INET_ADDRSTRLEN);
     char ts[32];
     get_timestamp(ts, sizeof(ts));
-    printf("%s[LINE MODE] Client connected: %s:%d\n", ts, client_ip, ntohs(client_addr->sin_port));
+    printf("%s[INFO] Client connected: %s:%d.\n", ts, client_ip, ntohs(client_addr->sin_port));
 
     // Initialize negotiation tracking
     telnet_negotiation_t negotiation = {
@@ -272,8 +278,10 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
         return;
     }
 
-    get_timestamp(ts, sizeof(ts));
-    printf("%s[LINE MODE] Timestamp thread started for client %s:%d\n", ts, client_ip, ntohs(client_addr->sin_port));
+    if (DEBUG) {
+        get_timestamp(ts, sizeof(ts));
+        printf("%s[DEBUG] Timestamp thread started for client %s:%d.\n", ts, client_ip, ntohs(client_addr->sin_port));
+    }
 
     while (running) {
         memset(buffer, 0, BUFFER_SIZE);
@@ -282,7 +290,7 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
         if (bytes_read <= 0) {
             if (bytes_read == 0) {
                 get_timestamp(ts, sizeof(ts));
-                printf("%s[LINE MODE] Client disconnected: %s:%d\n", ts, client_ip, ntohs(client_addr->sin_port));
+                printf("%s[INFO] Client disconnected: %s:%d.\n", ts, client_ip, ntohs(client_addr->sin_port));
             } else {
                 perror("recv error");
             }
@@ -360,9 +368,11 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
                                 send(client_fd, ready_msg, strlen(ready_msg), 0);
                                 pthread_mutex_unlock(&socket_mutex);
                                 negotiation.ready_sent = 1;
-                                get_timestamp(ts, sizeof(ts));
-                                printf("%s[LINE MODE] Negotiation complete for client %s:%d\n",
-                                       ts, client_ip, ntohs(client_addr->sin_port));
+                                if (DEBUG) {
+                                    get_timestamp(ts, sizeof(ts));
+                                    printf("%s[DEBUG] Negotiation complete for client %s:%d.\n",
+                                           ts, client_ip, ntohs(client_addr->sin_port));
+                                }
                             }
 
                             i += 3; // Skip IAC, command, option
@@ -408,8 +418,10 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
         if (data_len > 0) {
             // Check if buffer has enough space
             if (line_len + data_len > sizeof(line_buf)) {
-                get_timestamp(ts, sizeof(ts));
-                printf("%s[LINE MODE] Line buffer overflow, resetting\n", ts);
+                if (DEBUG) {
+                    get_timestamp(ts, sizeof(ts));
+                    printf("%s[DEBUG] Line buffer overflow, resetting.\n", ts);
+                }
                 line_len = 0;
             }
             memcpy(line_buf + line_len, data, data_len);
@@ -447,8 +459,10 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
                     pthread_mutex_lock(&socket_mutex);
                     send(client_fd, goodbye, strlen(goodbye), 0);
                     pthread_mutex_unlock(&socket_mutex);
-                    get_timestamp(ts, sizeof(ts));
-                    printf("%s[LINE MODE] Client quit: %s:%d\n", ts, client_ip, ntohs(client_addr->sin_port));
+                    if (DEBUG) {
+                        get_timestamp(ts, sizeof(ts));
+                        printf("%s[DEBUG] Client quit: %s:%d.\n", ts, client_ip, ntohs(client_addr->sin_port));
+                    }
                     goto cleanup;
                 }
 
@@ -460,9 +474,11 @@ void handle_client(int client_fd, struct sockaddr_in *client_addr) {
                 send(client_fd, echo_msg, strlen(echo_msg), 0);
                 pthread_mutex_unlock(&socket_mutex);
 
-                get_timestamp(ts, sizeof(ts));
-                printf("%s[LINE MODE] Echoed to %s:%d: %s\n",
-                       ts, client_ip, ntohs(client_addr->sin_port), line_content);
+                if (DEBUG) {
+                    get_timestamp(ts, sizeof(ts));
+                    printf("%s[DEBUG] Echoed to %s:%d: %s.\n",
+                           ts, client_ip, ntohs(client_addr->sin_port), line_content);
+                }
             }
 
             // Remove processed line from buffer
@@ -482,13 +498,17 @@ cleanup:
 
     // Stop the timestamp thread
     stop_flag = 1;
-    get_timestamp(ts, sizeof(ts));
-    printf("%s[LINE MODE] Stopping timestamp thread for client %s:%d\n", ts, client_ip, ntohs(client_addr->sin_port));
+    if (DEBUG) {
+        get_timestamp(ts, sizeof(ts));
+        printf("%s[DEBUG] Stopping timestamp thread for client %s:%d.\n", ts, client_ip, ntohs(client_addr->sin_port));
+    }
 
     // Wait for timestamp thread to finish
     pthread_join(timestamp_thread, NULL);
-    get_timestamp(ts, sizeof(ts));
-    printf("%s[LINE MODE] Timestamp thread stopped for client %s:%d\n", ts, client_ip, ntohs(client_addr->sin_port));
+    if (DEBUG) {
+        get_timestamp(ts, sizeof(ts));
+        printf("%s[DEBUG] Timestamp thread stopped for client %s:%d.\n", ts, client_ip, ntohs(client_addr->sin_port));
+    }
 
     // Cleanup
     pthread_mutex_destroy(&socket_mutex);
@@ -541,7 +561,7 @@ int main() {
 
     char ts[32];
     get_timestamp(ts, sizeof(ts));
-    printf("%sLine Mode Telnet Echo Server started on port %d\n", ts, PORT);
+    printf("%s[INFO] Line Mode Telnet Echo Server started on port %d.\n", ts, PORT);
     printf("Press Ctrl+C to stop the server\n\n");
 
     // Accept and handle clients
@@ -590,7 +610,7 @@ int main() {
     }
 
     get_timestamp(ts, sizeof(ts));
-    printf("\n%sShutting down server...\n", ts);
+    printf("\n%s[INFO] Shutting down server.\n", ts);
     close(server_fd);
     return 0;
 }
